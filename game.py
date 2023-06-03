@@ -32,6 +32,64 @@ def rotateRect(pt1, pt2, pt3, pt4, angle):
     return pt1, pt2, pt3, pt4
 
 
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+class Car:
+    def __init__(self, x, y):
+        # Position and size of car
+        self.pt = Point(x, y)
+        self.width = 14
+        self.height = 30
+
+        # Velocity and acceleration
+        self.dvel = 0
+        self.vel = 0
+        self.velX = 0
+        self.velY = 0
+        self.maxvel = 15  # Max velocity
+
+        # Angle
+        self.angle = math.radians(0)
+        self.desired_angle = self.angle
+
+        # Corners of car
+        self.pt1 = Point(
+            self.pt.x - self.width / 2, self.pt.y - self.height / 2
+        )  # Bottom left
+        self.pt2 = Point(
+            self.pt.x + self.width / 2, self.pt.y - self.height / 2
+        )  # Bottom right
+        self.pt3 = Point(
+            self.pt.x + self.width / 2, self.pt.y + self.height / 2
+        )  # Top right
+        self.pt4 = Point(
+            self.pt.x - self.width / 2, self.pt.y + self.height / 2
+        )  # Top left
+
+        # Sprite
+        self.original_image = pygame.image.load("./images/car.png").convert()
+        self.image = self.original_image  # Refernce to the original image
+        self.image.set_colorkey(
+            (0, 0, 0)
+        )  # Converts the white background to transparent
+        self.rect = self.image.get_rect(center=(x, y))
+
+
+class RacingEnv:
+    def __init__(self):
+        pygame.init()
+        self.font = pygame.font.Font(pygame.font.get_default_font(), 36)
+
+        self.width = 1000
+        self.height = 600
+        self.fps = 60
+        self.history = []
+
+
 # pygame setup
 pygame.init()
 WIDTH = 1000
@@ -42,6 +100,7 @@ running = True
 
 # Loading up spirtes
 car_image = pygame.image.load("./images/car.png").convert()
+car_image.set_colorkey((0, 0, 0))
 car_rect = car_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
 
 # In game params
@@ -79,8 +138,8 @@ while running:
 
     # Update car position based on speed and angle
     car_dx = math.cos(car_angle) * car_speed
-    car_dy = -math.sin(car_angle) * car_speed
-    car_rect.move_ip(car_dx, car_dy)
+    car_dy = math.sin(car_angle) * car_speed
+    car_rect.move_ip(car_dx, -car_dy)
 
     # Rendering
     screen.fill((0, 0, 0))
