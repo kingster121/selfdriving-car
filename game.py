@@ -40,10 +40,15 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 running = True
 
-# In game params
+# Loading up spirtes
 car_image = pygame.image.load("./images/car.png").convert()
 car_rect = car_image.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-car_angle = 0  # Initial angle
+
+# In game params
+STEER_SPEED = math.radians(2)  # Steering speed, radian
+car_angle = 0  # Initial angle, radian
+
+CAR_ACCELERATION = 0.25
 car_speed = 0  # Initial speed
 max_speed = 5  # Maximum speed
 
@@ -57,34 +62,39 @@ while running:
 
     # Steering control
     if keys[pygame.K_a]:
-        car_angle += math.radians(2)
+        car_angle += STEER_SPEED
     if keys[pygame.K_d]:
-        car_angle -= math.radians(2)
+        car_angle += 2 * math.pi - STEER_SPEED
+    car_angle = car_angle % (2 * math.pi)
 
     # Acceleration control
     if keys[pygame.K_w]:
-        car_speed += 0.1
+        car_speed += CAR_ACCELERATION
         if car_speed > max_speed:
             car_speed = max_speed
     if keys[pygame.K_s]:
-        car_speed -= 0.1
+        car_speed -= CAR_ACCELERATION
         if car_speed < -max_speed:
             car_speed = -max_speed
 
     # Update car position based on speed and angle
     car_dx = math.cos(car_angle) * car_speed
-    car_dy = math.sin(car_angle) * car_speed
+    car_dy = -math.sin(car_angle) * car_speed
     car_rect.move_ip(car_dx, car_dy)
 
     # Rendering
     screen.fill((0, 0, 0))
     rotated_car = pygame.transform.rotate(car_image, math.degrees(car_angle))
     screen.blit(rotated_car, car_rect)
-    print(car_rect)
 
-    text_font = pygame.font.SysFont("Arial", 30)
+    # Print game info on screen
+    text_font = pygame.font.SysFont("Arial", 20)
+    # Steering
     text_img = text_font.render(f"Steering angle: {car_angle}", True, (255, 255, 255))
     screen.blit(text_img, (600, 50))
+    # Velocity
+    text_img = text_font.render(f"dx: {car_dx} dy: {car_dy}", True, (255, 255, 255))
+    screen.blit(text_img, (0, 50))
 
     # flip() the display to put your work on screen
     pygame.display.flip()
