@@ -1,6 +1,5 @@
-## Environment image
-1. Walls
-2. Cars
+# Quick Access
+Run `human.py` to play the game for youself to understand how it works
 
 ## Inputs
 1. Acceleration

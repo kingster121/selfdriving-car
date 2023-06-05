@@ -54,15 +54,19 @@ class Car:
     def __init__(self, x, y):
         # Position and size of car
         self.pt = Point(x, y)
+        self.x = x
+        self.y = y
         self.width = 14
         self.height = 30
 
         # Velocity and acceleration
-        self.dvel = 0
+        self.dvel = 0.5
         self._vel = 0
         self.velX = 0
         self.velY = 0
-        self.maxvel = 15  # Max velocity
+        self.maxvel = 5  # Max velocity
+
+        self.points = 0
 
         # Angle
         self.angle = math.radians(0)
@@ -104,30 +108,30 @@ class Car:
     def action(self, keys):
         """keys = pygame.key.get_pressed()"""
         if keys[pygame.K_w]:
-            self.accelerate(self.dvel)
-        if keys[pygame.K_s]:
             self.accelerate(-self.dvel)
+        if keys[pygame.K_s]:
+            self.accelerate(self.dvel)
         if keys[pygame.K_d]:
             self.turn(-1)
         if keys[pygame.K_a]:
             self.turn(1)
 
     def accelerate(self, dvel):
-        self._vel += dvel
+        self.vel += dvel
 
     def turn(self, dir):
-        self.desired_angle = self.desired_angle + dir * math.radians(5)
+        self.desired_angle += dir * math.radians(5)
 
     def update(self):
         self.angle = self.desired_angle
 
         # Velocity
-        velocity = rotate(Point(0, 0), Point(0, self.vel), self.angle)
+        velocity = rotate(Point(0, 0), Point(0, self.vel), -self.angle)
         self.velX, self.velY = velocity.x, velocity.y
 
         # Position
-        self.x = self.x + self.velX
-        self.y = self.y + self.velY
+        self.x += self.velX
+        self.y += self.velY
         self.rect.center = self.x, self.y
 
         # Corners
@@ -136,11 +140,17 @@ class Car:
         self.pt3 = Point(self.pt3.x + self.velX, self.pt3.y + self.velY)
         self.pt4 = Point(self.pt4.x + self.velX, self.pt4.y + self.velY)
         self.p1, self.p2, self.p3, self.p4 = rotate_rect(
-            self.pt1, self.pt2, self.pt3, self.pt4, self.desired_angle
+            self.pt1,
+            self.pt2,
+            self.pt3,
+            self.pt4,
+            self.desired_angle,
         )
 
         # Rotate image
-        self.image = pygame.transform.rotate(self.original_image, self.desired_angle)
+        self.image = pygame.transform.rotate(
+            self.original_image, (math.degrees(self.desired_angle) + 90)
+        )
         x, y = self.rect.center  # Get current center
         self.rect = self.image.get_rect(
             center=(x, y)
@@ -229,11 +239,11 @@ class RacingEnv:
         # Config
         self.width = 1000
         self.height = 600
-        self.fps = 60
+        self.fps = 120
         self.history = []
 
         # Params
-        self.screen = pygame.display.set_mode(self.width, self.height)
+        self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption("Selfdriving Car")
         self.back_image = pygame.image.load("./images/track.png").convert()
         self.back_rect = self.back_image.get_rect()
@@ -245,7 +255,7 @@ class RacingEnv:
         self.reset()
 
     def reset(self):
-        self.screen.fill(0, 0, 0)
+        self.screen.fill((0, 0, 0))
 
         self.car = Car(50, 300)
         self.walls = get_walls()
@@ -261,10 +271,12 @@ class RacingEnv:
         # Checks if car passed goals and/or scores
         index = 0
         for index, goal in enumerate(self.goals):
+            # print(goal)
             if goal.isactiv:
-                goal.isactiv = False
-                self.goals[index - 1] = True
-                reward += GOAL_REWARD
+                if self.car.score(goal):
+                    goal.isactiv = False
+                    self.goals[index + 1].isactiv = True
+                    reward += GOAL_REWARD
 
         # Checks if car crashed into wall
         for wall in self.walls:
@@ -272,14 +284,14 @@ class RacingEnv:
                 reward += PENALTY
                 done = True
 
-        return reward
+        return done, reward
 
     def render(self, keys):
         DRAW_WALLS = True
         DRAW_GOALS = True
 
         pygame.time.delay(10)
-        self.clock = pygame.Clock()
+        self.clock = pygame.time.Clock()
 
         self.screen.fill((0, 0, 0))
         self.screen.blit(self.back_image, self.back_rect)

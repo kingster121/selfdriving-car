@@ -98,6 +98,6 @@ def get_goals():
     goals.append(goal23_5)
     goals.append(goal24)
 
-    goals[len(goals) - 1].isactiv = True
+    goals[0].isactiv = True
 
     return goals
