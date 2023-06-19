@@ -13,5 +13,5 @@ while not done:
             pygame.quit()
 
     keys = pygame.key.get_pressed()
-    done, reward = game.step(keys)
+    new_state, reward, done = game.step(keys)
     game.render(keys)

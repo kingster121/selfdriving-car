@@ -1,4 +1,5 @@
 import pygame
+import numpy as np
 import math
 from walls import Wall, get_walls
 from goals import Goal, get_goals
@@ -48,6 +49,38 @@ class Line:
     def __init__(self, pt1, pt2):
         self.pt1 = Point(pt1.x, pt1.y)
         self.pt2 = Point(pt2.x, pt2.y)
+
+
+class Ray:
+    def __init__(self,x,y,angle):
+        self.x = x
+        self.y = y
+        self.angle = angle
+
+    def cast(self, wall):
+        x1 = wall.x1 
+        y1 = wall.y1
+        x2 = wall.x2
+        y2 = wall.y2
+
+        vec = rotate(Point(0,0), Point(0,-1000), self.angle)
+        
+        x3 = self.x
+        y3 = self.y
+        x4 = self.x + vec.x
+        y4 = self.y + vec.y
+
+        den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
+            
+        if(den == 0):
+            den = 0
+        else:
+            t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den
+            u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / den
+
+            if t > 0 and t < 1 and u < 1 and u > 0:
+                pt = Point(math.floor(x1 + t * (x2 - x1)), math.floor(y1 + t * (y2 - y1)))
+                return(pt)
 
 
 class Car:
@@ -106,15 +139,31 @@ class Car:
         self._vel = max(-self.maxvel, min(value, self.maxvel))
 
     def action(self, keys):
-        """keys = pygame.key.get_pressed()"""
-        if keys[pygame.K_w]:
-            self.accelerate(-self.dvel)
-        if keys[pygame.K_s]:
-            self.accelerate(self.dvel)
-        if keys[pygame.K_d]:
-            self.turn(-1)
-        if keys[pygame.K_a]:
-            self.turn(1)
+        """keys = pygame.key.get_pressed() when human play
+        keys = 0 or 1 or 2 or 3 when machine play"""
+
+        print(type(keys), keys)
+        # Machine 
+        if isinstance(keys, int) or isinstance(keys, np.int64):
+            if keys == 0:
+              self.accelerate(-self.dvel)
+            if keys == 1:
+                self.accelerate(self.dvel)
+            if keys == 2:
+                self.turn(-1)
+            if keys == 3:
+                self.turn(1)
+
+        # Human
+        else:
+            if keys[pygame.K_w]:
+                self.accelerate(-self.dvel)
+            if keys[pygame.K_s]:
+                self.accelerate(self.dvel)
+            if keys[pygame.K_d]:
+                self.turn(-1)
+            if keys[pygame.K_a]:
+                self.turn(1)
 
     def accelerate(self, dvel):
         self.vel += dvel
@@ -155,6 +204,83 @@ class Car:
         self.rect = self.image.get_rect(
             center=(x, y)
         )  # Replace old rect with new rect'
+
+    def cast(self, walls):
+
+        ray1 = Ray(self.x, self.y, self.desired_angle)
+        ray2 = Ray(self.x, self.y, self.desired_angle - math.radians(30))
+        ray3 = Ray(self.x, self.y, self.desired_angle + math.radians(30))
+        ray4 = Ray(self.x, self.y, self.desired_angle + math.radians(45))
+        ray5 = Ray(self.x, self.y, self.desired_angle - math.radians(45))
+        ray6 = Ray(self.x, self.y, self.desired_angle + math.radians(90))
+        ray7 = Ray(self.x, self.y, self.desired_angle - math.radians(90))
+        ray8 = Ray(self.x, self.y, self.desired_angle + math.radians(180))
+
+        ray9 = Ray(self.x, self.y, self.desired_angle + math.radians(10))
+        ray10 = Ray(self.x, self.y, self.desired_angle - math.radians(10))
+        ray11 = Ray(self.x, self.y, self.desired_angle + math.radians(135))
+        ray12 = Ray(self.x, self.y, self.desired_angle - math.radians(135))
+        ray13 = Ray(self.x, self.y, self.desired_angle + math.radians(20))
+        ray14 = Ray(self.x, self.y, self.desired_angle - math.radians(20))
+
+        ray15 = Ray(self.p1.x,self.p1.y, self.desired_angle + math.radians(90))
+        ray16 = Ray(self.p2.x,self.p2.y, self.desired_angle - math.radians(90))
+
+        ray17 = Ray(self.p1.x,self.p1.y, self.desired_angle + math.radians(0))
+        ray18 = Ray(self.p2.x,self.p2.y, self.desired_angle - math.radians(0))
+
+        self.rays = []
+        self.rays.append(ray1)
+        self.rays.append(ray2)
+        self.rays.append(ray3)
+        self.rays.append(ray4)
+        self.rays.append(ray5)
+        self.rays.append(ray6)
+        self.rays.append(ray7)
+        self.rays.append(ray8)
+
+        self.rays.append(ray9)
+        self.rays.append(ray10)
+        self.rays.append(ray11)
+        self.rays.append(ray12)
+        self.rays.append(ray13)
+        self.rays.append(ray14)
+
+        self.rays.append(ray15)
+        self.rays.append(ray16)
+
+        self.rays.append(ray17)
+        self.rays.append(ray18)
+
+
+        observations = []
+        self.closestRays = []
+
+        for ray in self.rays:
+            closest = None #myPoint(0,0)
+            record = math.inf
+            for wall in walls:
+                pt = ray.cast(wall)
+                if pt:
+                    dist = distance(Point(self.x, self.y),pt)
+                    if dist < record:
+                        record = dist
+                        closest = pt
+
+            if closest: 
+                #append distance for current ray 
+                self.closestRays.append(closest)
+                observations.append(record)
+               
+            else:
+                observations.append(1000)
+
+        for i in range(len(observations)):
+            #invert observation values 0 is far away 1 is close
+            observations[i] = ((1000 - observations[i]) / 1000)
+
+        observations.append(self.vel / self.maxvel)
+        return observations
 
     def collision(self, wall):
         line1 = Line(self.p1, self.p2)
@@ -264,6 +390,7 @@ class RacingEnv:
 
     def step(self, keys):
         done = False
+        print("here", keys)
         self.car.action(keys)
         self.car.update()
         reward = 0
@@ -284,11 +411,17 @@ class RacingEnv:
                 reward += PENALTY
                 done = True
 
-        return done, reward
+        new_state = self.car.cast(self.walls)
+        #normalize states
+        if done:
+            new_state = None
+
+        return new_state, reward, done
 
     def render(self, keys):
         DRAW_WALLS = True
         DRAW_GOALS = True
+        DRAW_RAYS = False
 
         pygame.time.delay(10)
         self.clock = pygame.time.Clock()
@@ -306,19 +439,48 @@ class RacingEnv:
 
         self.car.draw(self.screen)
 
+        if DRAW_RAYS:
+            i = 0
+            for pt in self.car.closestRays:
+                pygame.draw.circle(self.screen, (0,0,255), (pt.x, pt.y), 5)
+                i += 1
+                if i < 15:
+                    pygame.draw.line(self.screen, (255,255,255), (self.car.x, self.car.y), (pt.x, pt.y), 1)
+                elif i >=15 and i < 17:
+                    pygame.draw.line(self.screen, (255,255,255), ((self.car.p1.x + self.car.p2.x)/2, (self.car.p1.y + self.car.p2.y)/2), (pt.x, pt.y), 1)
+                elif i == 17:
+                    pygame.draw.line(self.screen, (255,255,255), (self.car.p1.x , self.car.p1.y ), (pt.x, pt.y), 1)
+                else:
+                    pygame.draw.line(self.screen, (255,255,255), (self.car.p2.x, self.car.p2.y), (pt.x, pt.y), 1)
+
+
         # Render keys input WASD
         pygame.draw.rect(self.screen, (255, 255, 255), (800, 100, 40, 40), 2)
         pygame.draw.rect(self.screen, (255, 255, 255), (850, 100, 40, 40), 2)
         pygame.draw.rect(self.screen, (255, 255, 255), (900, 100, 40, 40), 2)
         pygame.draw.rect(self.screen, (255, 255, 255), (850, 50, 40, 40), 2)
-        if keys[pygame.K_w]:
-            pygame.draw.rect(self.screen, (0, 255, 0), (850, 50, 40, 40))
-        if keys[pygame.K_d]:
-            pygame.draw.rect(self.screen, (255, 255, 255), (900, 100, 40, 40))
-        if keys[pygame.K_s]:
-            pygame.draw.rect(self.screen, (255, 255, 255), (850, 100, 40, 40))
-        if keys[pygame.K_a]:
-            pygame.draw.rect(self.screen, (255, 255, 255), (800, 100, 40, 40))
+
+        # Machine
+        if isinstance(keys, int) or isinstance(keys, np.int64):
+            if keys == 0:
+                pygame.draw.rect(self.screen, (0, 255, 0), (850, 50, 40, 40))
+            if keys == 1:
+                pygame.draw.rect(self.screen, (255, 255, 255), (850, 100, 40, 40))
+            if keys == 2 :
+                pygame.draw.rect(self.screen, (255, 255, 255), (900, 100, 40, 40))
+            if keys == 3:
+                pygame.draw.rect(self.screen, (255, 255, 255), (800, 100, 40, 40))
+
+        # Human
+        else:
+            if keys[pygame.K_w]:
+                pygame.draw.rect(self.screen, (0, 255, 0), (850, 50, 40, 40))
+            if keys[pygame.K_s]:
+                pygame.draw.rect(self.screen, (255, 255, 255), (850, 100, 40, 40))
+            if keys[pygame.K_d]:
+                pygame.draw.rect(self.screen, (255, 255, 255), (900, 100, 40, 40))
+            if keys[pygame.K_a]:
+                pygame.draw.rect(self.screen, (255, 255, 255), (800, 100, 40, 40))
 
         # Scores
         text_surface = self.font.render(
